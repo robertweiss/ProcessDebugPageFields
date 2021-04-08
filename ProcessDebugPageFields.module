@@ -20,6 +20,8 @@ class ProcessDebugPageFields extends Process {
         'FieldtypeTextarea',
         'FieldtypeTextareaLanguage',
         'FieldtypeEmail',
+        'FieldtypeURL',
+        'FieldtypeColor',
     ];
 
     private $ignoredFieldTypes = [
