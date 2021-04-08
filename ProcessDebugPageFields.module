@@ -1,0 +1,296 @@
+<?php namespace ProcessWire;
+
+class ProcessDebugPageFields extends Process {
+    public static function getModuleinfo() {
+        return [
+            'title' => 'Debug Page Fields',
+            'summary' => 'Debug page fields in a readable manner',
+            'author' => 'Robert Weiss',
+            'version' => 1,
+            'singular' => true,
+            'autoload' => true
+        ];
+    }
+
+    private $simpleFieldTypes = [
+        'FieldtypePageTitle',
+        'FieldtypePageTitleLanguage',
+        'FieldtypeText',
+        'FieldtypeTextLanguage',
+        'FieldtypeTextarea',
+        'FieldtypeTextareaLanguage',
+        'FieldtypeEmail',
+    ];
+
+    private $ignoredFieldTypes = [
+        'FieldtypeModule',
+        'FieldtypeFieldsetGroup',
+        'FieldtypeFieldsetOpen',
+        'FieldtypeFieldsetClose',
+        'FieldtypeRuntimeMarkup',
+    ];
+
+    private $ignoredFieldNames = [
+        'ACP_scripts_and_styles',
+        'ACP_template',
+        'aos_column_break',
+        'language',
+        'language_files',
+        'language_files_site',
+        'pass',
+        'permissions',
+        'roles',
+        'repeater_matrix_type'
+    ];
+
+    public function init() {
+        $this->pages->addHookProperty('Page::debugFieldValues', function($event) {
+            $event->return = $this->debugPageFieldValues($event->object);
+        });
+
+        $this->pages->addHookProperty('Page::debugFieldTypes', function($event) {
+            $event->return = $this->debugPageFieldTypes($event->object);
+        });
+
+        parent::init();
+    }
+
+    private function debugPageFieldValues($page) {
+        $return = new \stdClass();
+
+        $return->id = $page->id;
+        $return->name = $page->name;
+        $return->template = $page->template->get('label|name');
+        $return->parent = $this->pageShortInfo($page->parent);
+        $return->children = $this->FieldtypePage($page->children);
+        $return->created = $this->date($page->created);
+        $return->modified = $this->date($page->modified);
+
+        $this->debugFieldValues($return, $page);
+
+        return $return;
+    }
+
+    private function debugFieldValues(&$return, $page) {
+        $fields = $page->template->fields;
+
+        if (get_class($page) === 'ProcessWire\RepeaterMatrixPage') {
+            $fields = $page->matrix('fields');
+        }
+
+        foreach ($fields as $field) {
+            // Processwire/FieldtypePageTitleLanguage -> FieldtypePageTitleLanguage
+            $type = str_replace('ProcessWire/', '', $field->type);
+            // FieldtypePageTitleLanguage -> PageTitleLanguage
+            $shortType = str_replace('Fieldtype', '', $type);
+
+            if (in_array($field->name, $this->ignoredFieldNames) || in_array($type, $this->ignoredFieldTypes)) {
+                continue;
+            }
+
+            $property = new \stdClass();
+            $property->label = $field->label; // e.g. Title,, Body
+            $property->type = $shortType; // e.g. PageTitleLanguage
+
+            // If there is a method named FieldType$type, use it to get the field value
+            if (method_exists($this, $type)) {
+                $property->value = $this->$type($page->getUnformatted($field->name), $field->name, $page);
+
+            // If there is no such method, just return the formatted field value
+            } else {
+                // Dump unknown (complex) fieldtypes so that we can add a method for them
+                if (!in_array($type, $this->simpleFieldTypes)) {
+                    ray($shortType);
+                }
+                $property->value = $page->$field;
+            }
+
+            $propertyName = $field->name;
+            $return->$propertyName = $property;
+        }
+    }
+
+    private function FieldtypeRepeater($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        foreach ($val as $item) {
+            $return = new \stdClass();
+            $this->debugFieldValues($return, $item);
+            $returnArr[] = $return;
+        }
+
+        return $returnArr;
+    }
+
+    private function FieldtypeRepeaterMatrix($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        foreach ($val as $item) {
+            $return = new \stdClass();
+            $return->type = $item->matrix('label');
+            $this->debugFieldValues($return, $item);
+            $returnArr[] = $return;
+        }
+
+        return $returnArr;
+    }
+
+    private function FieldtypeDatetime($val) {
+        return $this->date($val);
+    }
+
+    private function FieldtypeOptions($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        foreach ($val as $option) {
+            $returnArr[$option->value] = $option->title;
+        }
+
+        return $returnArr;
+    }
+
+    private function FieldtypeRadio($val, $fieldName, $page) {
+        $radioOptionsArr = explode(PHP_EOL, $page->fields->get($fieldName)->radio_options);
+        $radioOption = array_filter($radioOptionsArr, function($line) use ($page, $fieldName) {
+            return substr($line, 0, strlen($page->$fieldName)) === $page->$fieldName;
+        });
+        $label = (count($radioOption) == 1) ? explode(':=', array_shift($radioOption))[1] : '';
+
+        return "{$val} ({$label})";
+    }
+
+    private function FieldtypePage($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        if (get_class($val) === 'ProcessWire\PageArray') {
+            foreach ($val as $item) {
+                $returnArr[] = $this->pageShortInfo($item);
+            }
+
+            return count($returnArr) == 1 ? $returnArr[0] : $returnArr;
+        } else {
+            return $this->pageShortInfo($val);
+        }
+    }
+
+    private function FieldtypePageIDs($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        foreach ($val as $pageId) {
+            $page = pages($pageId->value);
+            $returnArr[] = "{$pageId->value} ({$page->title})";
+        }
+        return count($returnArr) == 1 ? $returnArr[0] : $returnArr;
+    }
+
+    private function FieldtypeFieldsetPage($val) {
+        $return = new \stdClass();
+        $this->debugFieldValues($return, $val);
+
+        return $return;
+    }
+
+    private function FieldtypeTable($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        $labels = $val->labels;
+        foreach ($val as $row) {
+            $rowArr = [];
+            foreach ($row as $name => $col) {
+                if ($name === 'id') continue;
+                $rowArr[$name] = $col;
+            }
+            $returnArr[] = count($rowArr) == 1 ? reset($rowArr) : $rowArr;
+        }
+
+        return count($returnArr) == 1 ? $returnArr[0] : $returnArr;
+    }
+
+    private function FieldtypeImage($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        foreach ($val as $img) {
+            $returnArr[] = $img->httpUrl;
+        }
+
+        return count($returnArr) == 1 ? $returnArr[0] : $returnArr;
+    }
+
+    private function FieldtypeImageReference($val) {
+        return json_decode($val)->filename;
+    }
+
+    private function FieldtypeCheckbox($val) {
+        return !!$val;
+    }
+
+    private function FieldtypeToggle($val) {
+        return !!$val;
+    }
+
+    private function FieldtypeFile($val) {
+        if (count($val) === 0) return;
+        $returnArr = [];
+
+        foreach ($val as $file) {
+            $returnArr[] = $file->httpUrl;
+        }
+
+        return count($returnArr) == 1 ? $returnArr[0] : $returnArr;
+    }
+
+    private function FieldtypeFunctional($val) {
+        unset($val['.of']);
+        return $val->data;
+    }
+
+    private function debugPageFieldTypes($page) {
+        $returnArr = [];
+
+        $fields = $page->template->fields;
+
+        if (get_class($page) === 'ProcessWire\RepeaterMatrixPage') {
+            $fields = $page->matrix('fields');
+        }
+
+        foreach ($fields as $field) {
+            $type = str_replace('ProcessWire/', '', $field->type);
+            $shortType = str_replace('Fieldtype', '', $type);
+
+            if (in_array($field->name, $this->ignoredFieldNames) || in_array($type, $this->ignoredFieldTypes)) {
+                continue;
+            }
+
+            $returnArr[$shortType][] = $field->name;
+        }
+
+        return $returnArr;
+    }
+
+    private function pageShortInfo($page) {
+        if (!$page || !$page->id) return;
+        $return = new \stdClass();
+        $return->title = $page->title;
+        $return->id = $page->id;
+        $return->template = $page->template->get('label|name');
+        $return->path = $page->path;
+
+        return $return;
+    }
+
+    private function date($timestamp) {
+        if (!$timestamp) return '';
+        $date = \DateTime::createFromFormat('U', $timestamp);
+        return $date->format('d.m.Y H:i:s');
+    }
+}
+
+?>
+
