@@ -1,4 +1,4 @@
-# ProcessDebugPageFields
+# Debug Page Fields
 #### [Processwire](https://processwire.com/) module to debug page fields in a readable manner
 ---
 Adds two new properties to all pages:
