@@ -1,5 +1,5 @@
 # ProcessDebugPageFields
-#### Processwire Module to debug page fields in a readable manner
+#### [Processwire](https://processwire.com/) module to debug page fields in a readable manner
 ---
 Adds two new properties to all pages:
 - **$page->debugFieldValues** – returns an object with all (sub-)fields, their labels, fieldtypes and values in a readable manner
