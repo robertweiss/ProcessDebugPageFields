@@ -1,14 +1,14 @@
 <?php namespace ProcessWire;
 
-class ProcessDebugPageFields extends Process {
+class ProcessDebugPageFields extends WireData implements Module {
     public static function getModuleinfo() {
         return [
             'title' => 'Debug Page Fields',
             'summary' => 'Debug page fields in a readable manner',
+            'href' => 'https://github.com/robertweiss/ProcessDebugPageFields.git',
             'author' => 'Robert Weiss',
             'version' => 1,
-            'singular' => true,
-            'autoload' => true
+            'autoload' => 'template!=admin'
         ];
     }
 
@@ -45,7 +45,7 @@ class ProcessDebugPageFields extends Process {
         'repeater_matrix_type'
     ];
 
-    public function init() {
+    public function ready() {
         $this->pages->addHookProperty('Page::debugFieldValues', function($event) {
             $event->return = $this->debugPageFieldValues($event->object);
         });
@@ -53,8 +53,6 @@ class ProcessDebugPageFields extends Process {
         $this->pages->addHookProperty('Page::debugFieldTypes', function($event) {
             $event->return = $this->debugPageFieldTypes($event->object);
         });
-
-        parent::init();
     }
 
     private function debugPageFieldValues($page) {
