@@ -105,7 +105,7 @@ class ProcessDebugPageFields extends WireData implements Module {
                 if (!in_array($type, $this->simpleFieldTypes)) {
                     $this->debugMissingFieldDefinition($shortType);
                 }
-                if (get_class($page->$field) && !method_exists(get_class($page->$field), '__toString')) {
+                if (is_object($page->$field) && !method_exists(get_class($page->$field), '__toString')) {
                     continue;
                 }
                 $property->value = $page->$field;

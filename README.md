@@ -6,3 +6,29 @@ Adds two new properties to all pages:
 - **$page->debugFieldTypes** – returns an object with all fieldtypes and their corresponding fields
 
 Both properties are best to be used in combination with debugging tools like [Tracy Debugger](https://processwire.com/modules/tracy-debugger/) or [Ray](https://myray.app/)
+
+## Supported fieldtypes
+- Button
+- Checkbox
+- Combo
+- Datetime
+- FieldsetPage
+- File
+- FontIconPicker
+- Functional
+- Image
+- ImageReference
+- MapMarker
+- Multiplier
+- Mystique
+- Options
+- Page
+- PageIDs
+- Radio
+- Repeater
+- RepeaterMatrix
+- RockAwesome
+- SeoMaestro
+- Table
+- Textareas
+- Toggle
