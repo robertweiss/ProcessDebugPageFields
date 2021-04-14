@@ -8,7 +8,7 @@ class ProcessDebugPageFields extends WireData implements Module {
             'href' => 'https://github.com/robertweiss/ProcessDebugPageFields.git',
             'author' => 'Robert Weiss',
             'version' => 1,
-            'autoload' => 'template!=admin'
+            'autoload' => 'template!=admin',
         ];
     }
 
@@ -42,17 +42,21 @@ class ProcessDebugPageFields extends WireData implements Module {
         'pass',
         'permissions',
         'roles',
-        'repeater_matrix_type'
+        'repeater_matrix_type',
     ];
 
     public function ready() {
-        $this->pages->addHookProperty('Page::debugFieldValues', function($event) {
+        $this->pages->addHookProperty(
+            'Page::debugFieldValues', function ($event) {
             $event->return = $this->debugPageFieldValues($event->object);
-        });
+        }
+        );
 
-        $this->pages->addHookProperty('Page::debugFieldTypes', function($event) {
+        $this->pages->addHookProperty(
+            'Page::debugFieldTypes', function ($event) {
             $event->return = $this->debugPageFieldTypes($event->object);
-        });
+        }
+        );
     }
 
     private function debugPageFieldValues($page) {
@@ -95,12 +99,14 @@ class ProcessDebugPageFields extends WireData implements Module {
             // If there is a method named FieldType$type, use it to get the field value
             if (method_exists($this, $type)) {
                 $property->value = $this->$type($page->getUnformatted($field->name), $field->name, $page);
-
-            // If there is no such method, just return the formatted field value
+                // If there is no such method, just return the formatted field value
             } else {
                 // Dump unknown (complex) fieldtypes so that we can add a method for them
                 if (!in_array($type, $this->simpleFieldTypes)) {
-                    ray($shortType);
+                    $this->debugMissingFieldDefinition($shortType);
+                }
+                if (get_class($page->$field) && !method_exists(get_class($page->$field), '__toString')) {
+                    continue;
                 }
                 $property->value = $page->$field;
             }
@@ -111,7 +117,9 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypeRepeater($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         foreach ($val as $item) {
@@ -124,7 +132,9 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypeRepeaterMatrix($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         foreach ($val as $item) {
@@ -142,7 +152,9 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypeOptions($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         foreach ($val as $option) {
@@ -154,16 +166,20 @@ class ProcessDebugPageFields extends WireData implements Module {
 
     private function FieldtypeRadio($val, $fieldName, $page) {
         $radioOptionsArr = explode(PHP_EOL, $page->fields->get($fieldName)->radio_options);
-        $radioOption = array_filter($radioOptionsArr, function($line) use ($page, $fieldName) {
+        $radioOption = array_filter(
+            $radioOptionsArr, function ($line) use ($page, $fieldName) {
             return substr($line, 0, strlen($page->$fieldName)) === $page->$fieldName;
-        });
+        }
+        );
         $label = (count($radioOption) == 1) ? explode(':=', array_shift($radioOption))[1] : '';
 
         return "{$val} ({$label})";
     }
 
     private function FieldtypePage($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         if (get_class($val) === 'ProcessWire\PageArray') {
@@ -178,13 +194,16 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypePageIDs($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         foreach ($val as $pageId) {
             $page = pages($pageId->value);
             $returnArr[] = "{$pageId->value} ({$page->title})";
         }
+
         return count($returnArr) == 1 ? $returnArr[0] : $returnArr;
     }
 
@@ -196,14 +215,18 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypeTable($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         $labels = $val->labels;
         foreach ($val as $row) {
             $rowArr = [];
             foreach ($row as $name => $col) {
-                if ($name === 'id') continue;
+                if ($name === 'id') {
+                    continue;
+                }
                 $rowArr[$name] = $col;
             }
             $returnArr[] = count($rowArr) == 1 ? reset($rowArr) : $rowArr;
@@ -213,7 +236,9 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypeImage($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         foreach ($val as $img) {
@@ -236,7 +261,9 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypeFile($val) {
-        if (count($val) === 0) return;
+        if (count($val) === 0) {
+            return;
+        }
         $returnArr = [];
 
         foreach ($val as $file) {
@@ -248,7 +275,89 @@ class ProcessDebugPageFields extends WireData implements Module {
 
     private function FieldtypeFunctional($val) {
         unset($val['.of']);
+
         return $val->data;
+    }
+
+    private function FieldtypeButton($val) {
+        $return = new \stdClass();
+        $return->label = $val->label;
+        $return->target = $val->target;
+        $return->class = $val->class;
+        $return->html = $val->html;
+
+        return $return;
+    }
+
+    private function FieldtypeCombo($val, $name, $page) {
+        $returnArr = [];
+        $comboData = $page->fields($name)->data;
+
+        for ($c = 1; $c <= $comboData['qty']; $c++) {
+            $comboField = new \stdClass();
+            $name = $this->getComboFieldValByKey($c, 'name', $comboData);
+            $comboField->label = $this->getComboFieldValByKey($c, 'label', $comboData);
+            $comboField->type = $this->getComboFieldValByKey($c, 'type', $comboData);
+            $comboField->value = $val->$name;
+            $returnArr[$name] = $comboField;
+        }
+
+        return $returnArr;
+    }
+
+    private function FieldtypeFontIconPicker($val) {
+        return $val;
+    }
+
+    private function FieldtypeRockAwesome($val) {
+        return $val;
+    }
+
+    private function FieldtypeMapMarker($val) {
+        $return = new \stdClass();
+        $return->lat = $val->lat;
+        $return->lng = $val->lng;
+        $return->address = $val->address;
+        $return->status = "{$val->status} ({$val->statusString})";
+
+        return $return;
+    }
+
+    private function FieldtypeMystique($val) {
+        $returnArr = [];
+
+        foreach ($val->data as $key => $val) {
+            if (substr($key, 0, 2) == "__") {
+                continue;
+            }
+            $returnArr[$key] = $val;
+        }
+
+        return $returnArr;
+    }
+
+    private function FieldtypeSeoMaestro($val) {
+        return $val->data;
+    }
+
+    private function FieldtypeMultiplier($val) {
+        $returnArr = [];
+
+        foreach ($val as $item) {
+            $returnArr[] = $item;
+        }
+
+        return $returnArr;
+    }
+
+    private function FieldtypeTextareas($val) {
+       $return = new \stdClass();
+
+        foreach ($val->data as $key => $value) {
+            $return->$key = $value;
+        }
+
+        return $return;
     }
 
     private function debugPageFieldTypes($page) {
@@ -275,7 +384,9 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function pageShortInfo($page) {
-        if (!$page || !$page->id) return;
+        if (!$page || !$page->id) {
+            return;
+        }
         $return = new \stdClass();
         $return->title = $page->title;
         $return->id = $page->id;
@@ -286,9 +397,32 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function date($timestamp) {
-        if (!$timestamp) return '';
+        if (!$timestamp) {
+            return '';
+        }
         $date = \DateTime::createFromFormat('U', $timestamp);
+
         return $date->format('d.m.Y H:i:s');
+    }
+
+    private function getComboFieldValByKey($i, $type, $data) {
+        $arr = array_filter(
+            $data, function ($key) use ($i, $type) {
+            return strpos($key, 'i'.$i.'_'.$type) === 0;
+        }, ARRAY_FILTER_USE_KEY
+        );
+
+        return array_shift($arr);
+    }
+
+    private function debugMissingFieldDefinition($fieldName) {
+        if (class_exists('Spatie\Ray\Ray')) {
+            ray('Missing field definition: '.$fieldName);
+        } else {
+            if (class_exists('TD')) {
+                \TD::barDump('Missing field definition: '.$fieldName);
+            }
+        }
     }
 }
 
