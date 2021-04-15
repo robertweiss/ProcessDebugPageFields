@@ -8,7 +8,7 @@ class ProcessDebugPageFields extends WireData implements Module {
             'href' => 'https://github.com/robertweiss/ProcessDebugPageFields.git',
             'author' => 'Robert Weiss',
             'version' => 1,
-            'autoload' => 'template!=admin',
+            'autoload' => true,
         ];
     }
 
