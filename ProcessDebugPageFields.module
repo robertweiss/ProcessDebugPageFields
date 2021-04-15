@@ -177,12 +177,12 @@ class ProcessDebugPageFields extends WireData implements Module {
     }
 
     private function FieldtypePage($val) {
-        if (count($val) === 0) {
+        if (wireCount($val) === 0) {
             return;
         }
         $returnArr = [];
 
-        if (get_class($val) === 'ProcessWire\PageArray') {
+        if (is_object($val) && (get_class($val) === 'ProcessWire\PageArray')) {
             foreach ($val as $item) {
                 $returnArr[] = $this->pageShortInfo($item);
             }
