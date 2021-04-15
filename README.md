@@ -10,9 +10,11 @@ Both properties are best to be used in combination with debugging tools like [Tr
 ## Supported fieldtypes
 - Button
 - Checkbox
+- Color
 - Combo
 - Datetime
-- FieldsetPage
+- Email
+- FieldsetPage *
 - File
 - FontIconPicker
 - Functional
@@ -24,11 +26,17 @@ Both properties are best to be used in combination with debugging tools like [Tr
 - Options
 - Page
 - PageIDs
+- PageTitle
 - Radio
-- Repeater
-- RepeaterMatrix
+- Repeater *
+- RepeaterMatrix *
 - RockAwesome
 - SeoMaestro
 - Table
+- Text
+- Textarea
 - Textareas
 - Toggle
+- URL
+
+\* The fields with complete subfield-support also list their corresponding subfields.
