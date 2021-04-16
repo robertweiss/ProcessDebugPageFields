@@ -1,6 +1,6 @@
 <?php namespace ProcessWire;
 
-class ProcessDebugPageFields extends WireData implements Module {
+class ProcessDebugPageFields extends Process implements Module {
     public static function getModuleInfo() {
         return [
             'title' => 'Debug Page Fields',
