@@ -426,5 +426,3 @@ class ProcessDebugPageFields extends Process implements Module {
     }
 }
 
-?>
-
