@@ -57,6 +57,79 @@ class ProcessDebugPageFields extends Process implements Module {
             $event->return = $this->debugPageFieldTypes($event->object);
         }
         );
+
+        if (class_exists('Spatie\Ray\Ray')) {
+            // ray()->page() returns debug info of page
+            \Spatie\Ray\Ray::macro('page', function ($value = null) {
+                // No param provided, get current page values
+                if (!$value) {
+                    $this->send(page()->debugFieldValues);
+
+                    return $this;
+                }
+
+                // Page object provided, get page values
+                if (is_object($value) && get_class($value) === 'ProcessWire\Page') {
+                    $this->send($value->debugFieldValues);
+
+                    return $this;
+                }
+
+                // ID provided, get corresponding page values
+                if (is_int($value)) {
+                    $page = pages($value);
+                    if ($page->id) {
+                        $this->send($page->debugFieldValues);
+                    } else {
+                        $this->send('Page with ID '.$value.' not found');
+                    }
+
+                    return $this;
+                }
+
+                // Assume we get a field name, get field of current page
+                $page = page();
+                $this->send($page->debugFieldValues->$value);
+
+                return $this;
+            });
+
+            // ray()->pages($selector/PagArray) returns debug info of pages
+            \Spatie\Ray\Ray::macro('pages', function ($value = '') {
+                if (is_object($value) && get_class($value) === 'ProcessWire\PageArray') {
+                    $pages = $value;
+                } else {
+                    $selector = $value;
+                    $pages = pages()->find($selector);
+                }
+
+                $result = new \stdClass();
+                $result->selectors = (string)$pages->getSelectors();
+                $result->count = $pages->count;
+                $result->pages = [];
+
+                foreach ($pages as $page) {
+                    $result->pages[] = $page->debugFieldValues;
+                }
+
+                $this->send($result);
+
+                return $this;
+            });
+
+            // ray()->config() returns Processwire config
+            \Spatie\Ray\Ray::macro('config', function ($key = null) {
+                $config = config()->data();
+
+                if (!$key) {
+                    $this->send($config);
+                } else {
+                    $this->send($config[$key]);
+                }
+
+                return $this;
+            });
+        }
     }
 
     private function debugPageFieldValues($page) {
@@ -351,7 +424,7 @@ class ProcessDebugPageFields extends Process implements Module {
     }
 
     private function FieldtypeTextareas($val) {
-       $return = new \stdClass();
+        $return = new \stdClass();
 
         foreach ($val->data as $key => $value) {
             $return->$key = $value;
@@ -388,7 +461,7 @@ class ProcessDebugPageFields extends Process implements Module {
             return;
         }
         $return = new \stdClass();
-        $return->title = $page->title;
+        $return->title = (string) $page->title;
         $return->id = $page->id;
         $return->template = $page->template->get('label|name');
         $return->path = $page->path;
@@ -409,7 +482,7 @@ class ProcessDebugPageFields extends Process implements Module {
         $arr = array_filter(
             $data, function ($key) use ($i, $type) {
             return strpos($key, 'i'.$i.'_'.$type) === 0;
-        }, ARRAY_FILTER_USE_KEY
+        },  ARRAY_FILTER_USE_KEY
         );
 
         return array_shift($arr);
