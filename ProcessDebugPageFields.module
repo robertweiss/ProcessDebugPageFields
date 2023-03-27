@@ -22,6 +22,7 @@ class ProcessDebugPageFields extends Process implements Module {
         'FieldtypeEmail',
         'FieldtypeURL',
         'FieldtypeColor',
+        'FieldtypeDecimal',
     ];
 
     private $ignoredFieldTypes = [
@@ -69,7 +70,7 @@ class ProcessDebugPageFields extends Process implements Module {
                 }
 
                 // Page object provided, get page values
-                if (is_object($value) && get_class($value) === 'ProcessWire\Page') {
+                if (is_object($value) && (get_class($value) === 'ProcessWire\Page' ||get_class($value) === 'ProcessWire\RepeaterMatrixPage')) {
                     $this->send($value->debugFieldValues);
 
                     return $this;
@@ -96,7 +97,11 @@ class ProcessDebugPageFields extends Process implements Module {
 
             // ray()->pages($selector/PagArray) returns debug info of pages
             \Spatie\Ray\Ray::macro('pages', function ($value = '') {
-                if (is_object($value) && get_class($value) === 'ProcessWire\PageArray') {
+                if (
+                    is_object($value) &&
+                    (get_class($value) === 'ProcessWire\PageArray' ||
+                    get_class($value) === 'ProcessWire\RepeaterPageArray' ||
+                    get_class($value) === 'ProcessWire\RepeaterMatrixPageArray')) {
                     $pages = $value;
                 } else {
                     $selector = $value;
@@ -110,6 +115,15 @@ class ProcessDebugPageFields extends Process implements Module {
 
                 foreach ($pages as $page) {
                     $result->pages[] = $page->debugFieldValues;
+                }
+
+                if (
+                    is_object($value) &&
+                    (get_class($value) === 'ProcessWire\RepeaterPageArray' ||
+                    get_class($value) === 'ProcessWire\RepeaterMatrixPageArray')) {
+
+                    $result->field = $value->getField()->name;
+                    $result->parent = $value->getParent()->debugFieldValues;;
                 }
 
                 $this->send($result);
