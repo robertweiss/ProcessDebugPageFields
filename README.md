@@ -13,6 +13,7 @@ Both properties are best to be used in combination with debugging tools like [Tr
 - Color
 - Combo
 - Datetime
+- Decimal
 - Email
 - FieldsetPage *
 - File
@@ -40,3 +41,16 @@ Both properties are best to be used in combination with debugging tools like [Tr
 - URL
 
 \* The fields with complete subfield-support also list their corresponding subfields.
+
+If Ray is found in the project (aka the class Spatie\Ray\Ray is loaded), three additional methods will be added to the ray() function:
+1. ray()->page($optionalParameter): the Parameter variable can be used as following:
+   - None: get infos of the current page 
+   - Page ID: get page infos via the page ID
+   - Page object: get page infos via a $page variable
+   - Field name: get debug infos of a specific field from the current page by providing its name
+2. ray()->pages($mandatoryParameter): the Parameter variable can be used as following:
+   - Selector: Provide a selector string to find the corresponding pages
+   - Pages Object
+3. ray()->config($optionalParameter): the Parameter variable can be used as following:
+   - None: get all config properties 
+   - Property name: get only the value of the provided property
